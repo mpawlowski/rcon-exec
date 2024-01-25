@@ -1,0 +1,44 @@
+name: CI
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.21.x' ]
+
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Dependencies
+        run: |
+          go get .
+        
+      - name: Build
+        run: |
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o rcon-exec-linux-amd64
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o rcon-exec-linux-arm64
+
+      - name: Copy Binary
+        run: |
+          mkdir -p release-bin/
+          cp rcon-exec* release-bin/
+
+      - uses: marvinpinto/action-automatic-releases@latest
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            LICENSE
+            release-bin/*
